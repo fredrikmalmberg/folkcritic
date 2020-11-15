@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset='utf-8'>
+	<meta http-equiv="content-type" content="text/html" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="icon" href="favicon.ico" type="image/x-icon"/>
+	<title>abcjs basic demo</title>
+	<link href="./static/abcjs-audio.css" media="all" rel="stylesheet" type="text/css" />
+	<script src="./static/abcjs_basic_5.9.1-min.js" type="text/javascript"></script>
+	<style>
+		.abcjs-inline-midi {
+			max-width: 400px;
+		}
+	</style>
+</head>
+<body>
+<div id="paper"></div>
+<div id="audio"></div>
+
+
+
+<a href="#" onclick="ABCJS.renderAbc('paper', cooleys); return false;">Cooley's</a>
+<a href="#" onclick="ABCJS.renderAbc('paper', own); return false;">own</a>
+<a href="#" onclick="onMidi(cooleys); return false;">Cooley's</a>
+<a href="#" onclick="onMidi(own); return false;">Own</a>
+<a href="#" onclick="onMidi(own2); return false;">Own2</a>
+<a href="#" onclick="onMidi(bigNotes); return false;">bigNotes</a>
+
+<script type="text/javascript">
+	var cooleys = 'X:1\nT: Cooley\'s\nM: 4/4\nL: 1/8\nR: reel\nK: Emin\nD2|:"Em"EB{c}BA B2 EB|~B2 AB dBAG|"D"FDAD BDAD|FDAD dAFD|\n"Em"EBBA B2 EB|B2 AB defg|"D"afe^c dBAF|1"Em"DEFD E2 D2:|2"Em"DEFD E2 gf||\n|:"Em"eB B2 efge|eB B2 gedB|"D"A2 FA DAFA|A2 FA defg|\n"Em"eB B2 eBgB|eB B2 defg|"D"afe^c dBAF|1"Em"DEFD E2 gf:|2"Em"DEFD E4|]\n';
+	var chorus = '%%staffwidth 500\nX: 1\nT: Chorus\nV: T1 clef=treble name="Soprano"\nV: T2 clef=treble name="Alto"\nV: B1 clef=bass name="Tenor"\nV: B2 clef=bass name="Bass"\nL:1/8\nK:G\nP:First Part\n[V: T1]"C"ed"Am"ed "F"cd"G7"gf |\n[V: T2]GGAA- A2BB |\n[V: B1]C3D- DF,3 |\n[V: B2]C,2A,,2 F,,2G,,2 |';
+	var bigNotes = "X:1\nM: 4/4\nL: 1/8\nK: Emin\n|:D2|EB{c}BA B2 EB|\n";
+    var own = 'X:0\nM:4/4\nK:Cdor\n c3 d c2 B G | G F F2 G B c d | c3 d c B G A | B G G F G2 f e |'
+    var own2 = 'X:0\nM:4/4\nK:Cdor\nc3d c2BG|GFF2 GBcd|c3d cBGA|BGGF G2fe|d2cd cBGA|BGFG BFGF|GBcd cdef|gbfd e2ef|'
+
+	function onMidi(input) {
+		if (ABCJS.synth.supportsAudio()) {
+			var visualObj = ABCJS.renderAbc('paper', input)[0];
+			var synthControl = new ABCJS.synth.SynthController();
+			var audioParams = { midiTranspose: -5, defaultQpm: 5 };
+			synthControl.load("#audio", null, {displayRestart: true, displayPlay: true, displayProgress: true});
+			synthControl.setTune(visualObj, false, audioParams);
+		} else {
+			document.querySelector("#audio").innerHTML = "<div class='audio-error'>Audio is not supported in this browser.</div>";
+		}
+	}
+
+</script>
+
+</body>
+</html>
