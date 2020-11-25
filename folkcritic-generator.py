@@ -1,6 +1,7 @@
 import pickle
 import numpy as np
 import time
+from tqdm import tqdm
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -39,17 +40,22 @@ class Generator:
         self.idx2token = []
         self.start_idx = None
         self.end_idx = None
-        self.rng = None
+        self.rng = np.random.RandomState(42)
         self.vocab_idxs = None
         self.token2idx = None
         self.FC_output_W = None
         self.FC_output_b = None
         self.hidden_state = []
+        self.cell_state = []
         self.numlayers = None
         self.sizeofx = None
         self.experiment_id = None
 
     def load_pretrained_generator(self, metadata_path):
+        """
+        Sets up the network based on pretrained weights
+        :param metadata_path: Path to a trained model
+        """
         f = open(metadata_path, 'rb')
         metadata = pickle.load(f, encoding="latin1")
         self.experiment_id = metadata['experiment_id']
@@ -82,43 +88,21 @@ class Generator:
         self.FC_output_b = metadata['param_values'][44]
         self.sizeofx = self.LSTM_Wxi[0].shape[0]
 
-    def set_state_from_seed(self, seed):
-        # Converting the seed passed as an argument into a list of idx
-        seed_sequence = [self.start_idx]
-
-        for token in seed.split(' '):
-            seed_sequence.append(self.token2idx[token])
-
-        # initialise network
-        for tok in seed_sequence[:-1]:
-            x = np.zeros(self.sizeofx, dtype=np.int8)
-            x[tok] = 1
-            for jj in range(self.numlayers):
-                it = sigmoid(np.dot(x, self.LSTM_Wxi[jj]) + np.dot(self.htm1[jj], self.LSTM_Whi[jj]) + self.LSTM_bi[jj])
-                ft = sigmoid(np.dot(x, self.LSTM_Wxf[jj]) + np.dot(self.htm1[jj], self.LSTM_Whf[jj]) + self.LSTM_bf[jj])
-                ct = np.multiply(ft, self.ctm1[jj]) + np.multiply(it, np.tanh(
-                    np.dot(x, self.LSTM_Wxc[jj]) + np.dot(self.htm1[jj], self.LSTM_Whc[jj]) + self.LSTM_bc[jj]))
-                ot = sigmoid(np.dot(x, self.LSTM_Wxo[jj]) + np.dot(self.htm1[jj], self.LSTM_Who[jj]) + self.LSTM_bo[jj])
-                ht = np.multiply(ot, np.tanh(ct))
-                x = ht
-                self.ctm1[jj] = ct
-                self.htm1[jj] = ht
-
-        for jj in range(self.numlayers):
-            self.LSTM_hid_init[jj] = self.htm1[jj]
-            self.LSTM_cell_init[jj] = self.ctm1[jj]
-
-        # Keeping separate 'hidden states' as they are different from htm1 when generating
-        self.hidden_state = self.htm1
-
-    def generate_tunes(self, ntunes, rng_seed = 42, temperature=1.0, display=False, save_to_disk=False):
+    def generate_tunes(self, ntunes, rng_seed = 42, temperature=1.0):
+        """
+        Generates a specified number of tunes and returns network states and tunes
+        :param ntunes: Number of tunes to generate
+        :param rng_seed: Seed for the random generation
+        :param temperature: The temp used when generating
+        :return: Tunes, hidden states and cell states of the network for each tune
+        """
         self.rng = np.random.RandomState(rng_seed)
         target_path = "samples/%s-s%d-%.2f-%s.txt" % (
             self.experiment_id, rng_seed, temperature, time.strftime("%Y%m%d-%H%M%S", time.localtime()))
-        all_hidden_states = []
+        all_hidden_states, all_cell_states = None, None
         all_tunes = []
-        for i in range(ntunes):
-            # initialise network
+        n = 0
+        for i in tqdm(range(ntunes)):
             output = []
             for jj in range(self.numlayers):
                 self.htm1[jj] = self.LSTM_hid_init[jj]
@@ -139,50 +123,156 @@ class Generator:
                     self.htm1[jj] = ht
                 output.append(softmax(np.dot(x, self.FC_output_W) + self.FC_output_b, temperature))
                 next_itoken = self.rng.choice(self.vocab_idxs, p=output[-1].squeeze())
-                if next_itoken != self.end_idx: # not saving state when at end of song token
+                if next_itoken != self.end_idx: # saving state before end of song token
                     self.hidden_state = self.htm1
+                    self.cell_state = self.ctm1
                 sequence.append(next_itoken)
                 if len(sequence) > 1000: break
             abc_tune = [self.idx2token[j] for j in sequence[1:-1]]
-            if save_to_disk:
-                print('X:' + repr(i))
-                f = open(target_path, 'a+')
-                f.write('X:' + repr(i) + '\n')
-                f.write(abc_tune[0] + '\n')
-                f.write(abc_tune[1] + '\n')
-                f.write(' '.join(abc_tune[2:]) + '\n\n')
-                f.close()
-            if display:
-                print('X:' + repr(i))
-                print(abc_tune[0])
-                print(abc_tune[1])
-                print(''.join(abc_tune[2:]) + '\n')
-            tune = ['X:' + repr(i), abc_tune[0], abc_tune[1], ''.join(abc_tune[2:])]
-            all_tunes.append(tune)
-            all_hidden_states.append(self.hidden_state)
+            if len(abc_tune) > 2:
+                tune = ['X:' + repr(i), abc_tune[0], abc_tune[1], ''.join(abc_tune[2:])]
+                all_tunes.append(tune)
+                h_state_to_store = np.expand_dims(np.concatenate(self.hidden_state).ravel(), axis = 0)
+                c_state_to_store = np.expand_dims(np.concatenate(self.cell_state).ravel(), axis = 0)
+                if i == 0:
+                    all_hidden_states = h_state_to_store
+                    all_cell_states = c_state_to_store
+                else:
+                    all_hidden_states = np.append(np.copy(all_hidden_states), h_state_to_store, axis=0)
+                    all_cell_states = np.append(np.copy(all_cell_states), c_state_to_store, axis=0)
+            else:
+                print('Failed generation - skipping song')
 
-        return all_tunes, all_hidden_states
+        return all_tunes, all_hidden_states, all_cell_states
 
-    def get_hidden_states_from_data(self, data_path, no_of_songs = None):
+    def set_state_from_seed(self, seed, modify=None):
+        """
+        Sets the network states based on a single seed
+        :param seed: Input seed to be sent through the network
+        :param modify: If specified we replace the ending of the song with random tokens
+        """
+        # Converting the seed passed as an argument into a list of idx
+        seed_sequence = [self.start_idx]
+
+        for token in seed.split(' '):
+            seed_sequence.append(self.token2idx[token])
+
+        if modify is not None:
+            for i in range(modify):
+                seed_sequence[-i] = self.rng.choice(self.vocab_idxs)
+
+        # initialise network
+        for tok in seed_sequence[:-1]:
+            x = np.zeros(self.sizeofx, dtype=np.int8)
+            x[tok] = 1
+            for jj in range(self.numlayers):
+                it = sigmoid(np.dot(x, self.LSTM_Wxi[jj]) + np.dot(self.htm1[jj], self.LSTM_Whi[jj]) + self.LSTM_bi[jj])
+                ft = sigmoid(np.dot(x, self.LSTM_Wxf[jj]) + np.dot(self.htm1[jj], self.LSTM_Whf[jj]) + self.LSTM_bf[jj])
+                ct = np.multiply(ft, self.ctm1[jj]) + np.multiply(it, np.tanh(
+                    np.dot(x, self.LSTM_Wxc[jj]) + np.dot(self.htm1[jj], self.LSTM_Whc[jj]) + self.LSTM_bc[jj]))
+                ot = sigmoid(np.dot(x, self.LSTM_Wxo[jj]) + np.dot(self.htm1[jj], self.LSTM_Who[jj]) + self.LSTM_bo[jj])
+                ht = np.multiply(ot, np.tanh(ct))
+                x = ht
+                self.ctm1[jj] = ct
+                self.htm1[jj] = ht
+
+    def get_states_from_data(self, data_path, no_of_songs=None, modify=None):
+        """
+        Function to get all the cell states and hidden states from real tune data
+        :param data_path: path to where the data is stored
+        :param no_of_songs: If we want to specify a specific number of songs and not use all the data
+        :param modify: If specified we replace the ending of the song with random tokens
+        :return: all hidden states and all cell states for the network and the given songs
+        """
         with open(data_path, 'r') as f:
             data = f.read()
         tunes = data.split('\n\n')
         del data
-        all_hidden_states = []
-        for idx, tune in enumerate(tunes):
-            seed = tunes[0].replace('\n', ' ')
-            self.set_state_from_seed(seed)
-            all_hidden_states.append(self.hidden_state)
-            print("song ", idx)
-            if no_of_songs is not None and idx+2 > no_of_songs:
-                return all_hidden_states
-        return all_hidden_states
+        all_hidden_states = None
+        all_cell_states = None
+        print('Total number of tunes found ', len(tunes))
+        if no_of_songs is None:
+            no_of_songs = len(tunes)
+        for idx in tqdm(range(no_of_songs)):
+            tune = tunes[idx]
+            try:
+                seed = tune.replace('\n', ' ')
+                self.set_state_from_seed(seed, modify)
+                h_state_to_store = np.expand_dims(np.concatenate(self.htm1).ravel(), axis = 0)
+                c_state_to_store = np.expand_dims(np.concatenate(self.ctm1).ravel(), axis=0)
+                if idx == 0:
+                    all_hidden_states = h_state_to_store
+                    all_cell_states = c_state_to_store
+
+                else:
+                    all_hidden_states = np.append(np.copy(all_hidden_states), h_state_to_store, axis=0)
+                    all_cell_states = np.append(np.copy(all_cell_states), c_state_to_store, axis=0)
+            except:
+                print('Could not parse song ' + str(idx) + ' from data')
+                pass
+        return all_hidden_states, all_cell_states
+
+    def get_parsable_idx(self, data_path):
+        """
+        Function that gives all the indexes in the data that where correctly parsed
+        :param data_path: path to where the data is stored
+        :return: a list of indexes
+        """
+        with open(data_path, 'r') as f:
+            data = f.read()
+        tunes = data.split('\n\n')
+        del data
+        all_idx = []
+        no_of_songs = len(tunes)
+        print('Total number of tunes found ', no_of_songs)
+        for idx in tqdm(range(no_of_songs)):
+            tune = tunes[idx]
+            try:
+                seed = tune.replace('\n', ' ')
+                for token in seed.split(' '):
+                    _ = self.token2idx[token]
+                all_idx.append(idx)
+            except:
+                #print('Could not parse song ' + str(idx) + ' from data')
+                pass
+        return all_idx
+
+    def get_tune_from_idx(self, data_path, idx):
+        """
+        :param data_path: path to where the data is stored
+        :param idx: index of requested song
+        :return: the song as a string
+        """
+        with open(data_path, 'r') as f:
+            data = f.read()
+        tunes = data.split('\n\n')
+        del data
+        tune = tunes[idx]
+        return tune
+
 
 if __name__ == '__main__':
     generator = Generator()
     generator.load_pretrained_generator('metadata/folkrnn_v2.pkl')
-    tunes, states = generator.generate_tunes(2)
+
     data_path = 'data/data_v2'
-    all_hidden_states = generator.get_hidden_states_from_data(data_path, 3)
+    real_idx = generator.get_parsable_idx(data_path)
+    pickle.dump(real_idx, open("real_idx", "wb"))
+    real_hidden_states, real_cell_states = generator.get_states_from_data(data_path, no_of_songs=10, modify=None)
+    pickle.dump(real_hidden_states, open("real_h_new", "wb"))
+    pickle.dump(real_cell_states, open("real_c_new", "wb"))
+
+    number_of_songs = len(real_hidden_states)
+    generated_tunes, generated_hidden_states, generated_cell_states = generator.generate_tunes(number_of_songs,
+                                                                                               temperature=1.0)
+    pickle.dump(generated_tunes, open("generated_tunes", "wb"))
+    pickle.dump(generated_hidden_states, open("generated_h", "wb"))
+    pickle.dump(generated_cell_states, open("generated_c", "wb"))
+
+    generated_tunes, generated_hidden_states, generated_cell_states = generator.generate_tunes(number_of_songs,
+                                                                                               temperature=3.0)
+    pickle.dump(generated_tunes, open("generated_tunes_temp3", "wb"))
+    pickle.dump(generated_hidden_states, open("generated_h_temp3", "wb"))
+    pickle.dump(generated_cell_states, open("generated_c_temp3", "wb"))
 
 

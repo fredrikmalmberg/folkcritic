@@ -1,5 +1,0 @@
-X:0
-M:4/4
-K:Cdor
-c 3 d c 2 B G | G F F 2 G B c d | c 3 d c B G A | B G G F G 2 f e
-
