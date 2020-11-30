@@ -130,7 +130,7 @@ class Generator:
                 if len(sequence) > 1000: break
             abc_tune = [self.idx2token[j] for j in sequence[1:-1]]
             if len(abc_tune) > 2:
-                tune = ['X:' + repr(i), abc_tune[0], abc_tune[1], ''.join(abc_tune[2:])]
+                tune = ['X:' + repr(i), abc_tune[0], abc_tune[1], ' '.join(abc_tune[2:])]
                 all_tunes.append(tune)
                 h_state_to_store = np.expand_dims(np.concatenate(self.hidden_state).ravel(), axis = 0)
                 c_state_to_store = np.expand_dims(np.concatenate(self.cell_state).ravel(), axis = 0)
@@ -158,9 +158,14 @@ class Generator:
             seed_sequence.append(self.token2idx[token])
 
         if modify is not None:
-            for i in range(modify):
-                seed_sequence[-i] = self.rng.choice(self.vocab_idxs)
-
+            if modify > 0:
+                r = np.min([len(seed_sequence)-2, modify])
+                for i in range(r):
+                    seed_sequence[-i] = self.rng.choice(self.vocab_idxs)
+            else:
+                r = np.min([len(seed_sequence) - 2, -modify])
+                for i in range(r):
+                    seed_sequence[i] = self.rng.choice(self.vocab_idxs)
         # initialise network
         for tok in seed_sequence[:-1]:
             x = np.zeros(self.sizeofx, dtype=np.int8)
@@ -175,6 +180,9 @@ class Generator:
                 x = ht
                 self.ctm1[jj] = ct
                 self.htm1[jj] = ht
+        abc_tune = [self.idx2token[j] for j in seed_sequence[1:-1]]
+        new_tune = [abc_tune[0], abc_tune[1], ''.join(abc_tune[2:])]
+        return new_tune
 
     def get_states_from_data(self, data_path, no_of_songs=None, modify=None):
         """
@@ -190,6 +198,7 @@ class Generator:
         del data
         all_hidden_states = None
         all_cell_states = None
+        all_tunes = []
         print('Total number of tunes found ', len(tunes))
         if no_of_songs is None:
             no_of_songs = len(tunes)
@@ -197,7 +206,7 @@ class Generator:
             tune = tunes[idx]
             try:
                 seed = tune.replace('\n', ' ')
-                self.set_state_from_seed(seed, modify)
+                seed_sequence = self.set_state_from_seed(seed, modify=modify)
                 h_state_to_store = np.expand_dims(np.concatenate(self.htm1).ravel(), axis = 0)
                 c_state_to_store = np.expand_dims(np.concatenate(self.ctm1).ravel(), axis=0)
                 if idx == 0:
@@ -207,10 +216,11 @@ class Generator:
                 else:
                     all_hidden_states = np.append(np.copy(all_hidden_states), h_state_to_store, axis=0)
                     all_cell_states = np.append(np.copy(all_cell_states), c_state_to_store, axis=0)
+                all_tunes.append(seed_sequence)
             except:
                 print('Could not parse song ' + str(idx) + ' from data')
                 pass
-        return all_hidden_states, all_cell_states
+        return all_hidden_states, all_cell_states, all_tunes
 
     def get_parsable_idx(self, data_path):
         """
@@ -253,26 +263,60 @@ class Generator:
 
 if __name__ == '__main__':
     generator = Generator()
+    # Loading weights
     generator.load_pretrained_generator('metadata/folkrnn_v2.pkl')
 
-    data_path = 'data/data_v2'
-    real_idx = generator.get_parsable_idx(data_path)
-    pickle.dump(real_idx, open("real_idx", "wb"))
-    real_hidden_states, real_cell_states = generator.get_states_from_data(data_path, no_of_songs=10, modify=None)
-    pickle.dump(real_hidden_states, open("real_h_new", "wb"))
-    pickle.dump(real_cell_states, open("real_c_new", "wb"))
+    # Different ways of generating states
+    states_from_seed = False
+    states_from_generated = True
 
-    number_of_songs = len(real_hidden_states)
-    generated_tunes, generated_hidden_states, generated_cell_states = generator.generate_tunes(number_of_songs,
-                                                                                               temperature=1.0)
-    pickle.dump(generated_tunes, open("generated_tunes", "wb"))
-    pickle.dump(generated_hidden_states, open("generated_h", "wb"))
-    pickle.dump(generated_cell_states, open("generated_c", "wb"))
+    number_of_songs = None
+    if states_from_seed:
+        data_path = 'data/data_v2'
+        #real_idx = generator.get_parsable_idx(data_path)
+        #pickle.dump(real_idx, open("real_idx", "wb"))
+        real_hidden_states, real_cell_states, real_tunes = [], [], []
 
-    generated_tunes, generated_hidden_states, generated_cell_states = generator.generate_tunes(number_of_songs,
-                                                                                               temperature=3.0)
-    pickle.dump(generated_tunes, open("generated_tunes_temp3", "wb"))
-    pickle.dump(generated_hidden_states, open("generated_h_temp3", "wb"))
-    pickle.dump(generated_cell_states, open("generated_c_temp3", "wb"))
+        mod_range = 100
+        for l in range(mod_range):
+            real_hidden_states_tmp, real_cell_states_tmp, real_tunes_tmp = \
+                generator.get_states_from_data(data_path, no_of_songs=number_of_songs, modify=-l)
+            real_hidden_states.append(real_hidden_states_tmp)
+            real_cell_states.append(real_cell_states_tmp)
+            real_tunes.append(real_tunes_tmp)
+        pickle.dump(real_tunes, open("critic_data/real_tunes_mod_b", "wb"))
+        pickle.dump(real_hidden_states, open("critic_data/real_h_mod_b", "wb"))
+        pickle.dump(real_cell_states, open("critic_data/real_c_mod_b", "wb"))
+
+
+
+    if states_from_generated:
+        if states_from_seed:
+            number_of_songs = len(real_hidden_states)
+        else:
+            number_of_songs = 1000
+        generated_tunes, generated_hidden_states, generated_cell_states = \
+            generator.generate_tunes(number_of_songs, temperature=1.0)
+        pickle.dump(generated_tunes, open("generated_tunes_test", "wb"))
+        pickle.dump(generated_hidden_states, open("generated_h_test", "wb"))
+        pickle.dump(generated_cell_states, open("generated_c_test", "wb"))
+        h_states = None
+        c_states = None
+        for idx, tune in enumerate(generated_tunes):
+            abc_tune = ' '.join([tune[1], tune[2], tune[3]])
+            _ = generator.set_state_from_seed(abc_tune)
+            h_state_to_store = np.expand_dims(np.concatenate(generator.htm1).ravel(), axis=0)
+            c_state_to_store = np.expand_dims(np.concatenate(generator.ctm1).ravel(), axis=0)
+            if idx == 0:
+                h_states = h_state_to_store
+                c_states = c_state_to_store
+            else:
+                h_states = np.append(np.copy(h_states), h_state_to_store, axis=0)
+                c_states = np.append(np.copy(c_states), c_state_to_store, axis=0)
+        pickle.dump(h_states, open("generated_h_test_reset", "wb"))
+        pickle.dump(c_states, open("generated_c_test_reset", "wb"))
+
+
+
 
 
