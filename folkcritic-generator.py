@@ -294,27 +294,34 @@ if __name__ == '__main__':
         if states_from_seed:
             number_of_songs = len(real_hidden_states)
         else:
-            number_of_songs = 1000
-        generated_tunes, generated_hidden_states, generated_cell_states = \
-            generator.generate_tunes(number_of_songs, temperature=1.0)
-        pickle.dump(generated_tunes, open("generated_tunes_test", "wb"))
-        pickle.dump(generated_hidden_states, open("generated_h_test", "wb"))
-        pickle.dump(generated_cell_states, open("generated_c_test", "wb"))
-        h_states = None
-        c_states = None
-        for idx, tune in enumerate(generated_tunes):
-            abc_tune = ' '.join([tune[1], tune[2], tune[3]])
-            _ = generator.set_state_from_seed(abc_tune)
-            h_state_to_store = np.expand_dims(np.concatenate(generator.htm1).ravel(), axis=0)
-            c_state_to_store = np.expand_dims(np.concatenate(generator.ctm1).ravel(), axis=0)
-            if idx == 0:
-                h_states = h_state_to_store
-                c_states = c_state_to_store
-            else:
-                h_states = np.append(np.copy(h_states), h_state_to_store, axis=0)
-                c_states = np.append(np.copy(c_states), c_state_to_store, axis=0)
-        pickle.dump(h_states, open("generated_h_test_reset", "wb"))
-        pickle.dump(c_states, open("generated_c_test_reset", "wb"))
+            number_of_songs = 23000
+        batch_size = 1000
+        cwd = 'state_data/'
+        for b in range(number_of_songs//batch_size):
+            print('---Running batch {} of {} ---'.format(b, number_of_songs//batch_size))
+            print('Generating {} songs'.format(batch_size))
+            generated_tunes, generated_hidden_states, generated_cell_states = \
+                generator.generate_tunes(batch_size, temperature=1.0)
+            pickle.dump(generated_tunes, open(cwd + "generated_tunes_test_" + str(b), "wb"))
+            pickle.dump(generated_hidden_states, open(cwd + "generated_h_test_" + str(b), "wb"))
+            pickle.dump(generated_cell_states, open(cwd + "generated_c_test_" + str(b), "wb"))
+            h_states = None
+            c_states = None
+            print('Seeding with {} songs'.format(batch_size))
+            for idx in tqdm(range(len(generated_tunes))):
+                tune = generated_tunes[idx]
+                abc_tune = ' '.join([tune[1], tune[2], tune[3]])
+                _ = generator.set_state_from_seed(abc_tune)
+                h_state_to_store = np.expand_dims(np.concatenate(generator.htm1).ravel(), axis=0)
+                c_state_to_store = np.expand_dims(np.concatenate(generator.ctm1).ravel(), axis=0)
+                if idx == 0:
+                    h_states = h_state_to_store
+                    c_states = c_state_to_store
+                else:
+                    h_states = np.append(np.copy(h_states), h_state_to_store, axis=0)
+                    c_states = np.append(np.copy(c_states), c_state_to_store, axis=0)
+            pickle.dump(h_states, open(cwd + "generated_h_test_reset_" + str(b), "wb"))
+            pickle.dump(c_states, open(cwd + "generated_c_test_reset_" + str(b), "wb"))
 
 
 
