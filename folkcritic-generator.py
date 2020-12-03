@@ -97,8 +97,6 @@ class Generator:
         :return: Tunes, hidden states and cell states of the network for each tune
         """
         self.rng = np.random.RandomState(rng_seed)
-        target_path = "samples/%s-s%d-%.2f-%s.txt" % (
-            self.experiment_id, rng_seed, temperature, time.strftime("%Y%m%d-%H%M%S", time.localtime()))
         all_hidden_states, all_cell_states = None, None
         all_tunes = []
         n = 0
@@ -170,6 +168,10 @@ class Generator:
         for tok in seed_sequence[:-1]:
             x = np.zeros(self.sizeofx, dtype=np.int8)
             x[tok] = 1
+            # Resetting seed before starting
+            for jj in range(self.numlayers):
+                self.htm1[jj] = self.LSTM_hid_init[jj]
+                self.ctm1[jj] = self.LSTM_cell_init[jj]
             for jj in range(self.numlayers):
                 it = sigmoid(np.dot(x, self.LSTM_Wxi[jj]) + np.dot(self.htm1[jj], self.LSTM_Whi[jj]) + self.LSTM_bi[jj])
                 ft = sigmoid(np.dot(x, self.LSTM_Wxf[jj]) + np.dot(self.htm1[jj], self.LSTM_Whf[jj]) + self.LSTM_bf[jj])
@@ -267,11 +269,26 @@ if __name__ == '__main__':
     generator.load_pretrained_generator('metadata/folkrnn_v2.pkl')
 
     # Different ways of generating states
-    states_from_seed = False
-    states_from_generated = True
+    states_from_seed = True
+    states_from_seed_mod = False
+    states_from_generated = False
 
-    number_of_songs = None
+    number_of_songs = 23000
+
     if states_from_seed:
+        cwd = 'state_data/'
+        data_path = 'data/data_v2'
+        batch_size = 1000
+        for b in range(number_of_songs // batch_size):
+            print('---Running batch {} of {} ---'.format(b, number_of_songs // batch_size))
+            print('Seeding with {} songs'.format(batch_size))
+            real_h_states, real_c_states, real_tunes = \
+                    generator.get_states_from_data(data_path, no_of_songs=batch_size)
+            pickle.dump(real_tunes, open(cwd + "real_tunes_" + str(b), "wb"))
+            pickle.dump(real_h_states, open(cwd + "real_h_" + str(b), "wb"))
+            pickle.dump(real_c_states, open(cwd + "real_c_" + str(b), "wb"))
+
+    if states_from_seed_mod:
         data_path = 'data/data_v2'
         #real_idx = generator.get_parsable_idx(data_path)
         #pickle.dump(real_idx, open("real_idx", "wb"))
@@ -284,11 +301,9 @@ if __name__ == '__main__':
             real_hidden_states.append(real_hidden_states_tmp)
             real_cell_states.append(real_cell_states_tmp)
             real_tunes.append(real_tunes_tmp)
-        pickle.dump(real_tunes, open("critic_data/real_tunes_mod_b", "wb"))
-        pickle.dump(real_hidden_states, open("critic_data/real_h_mod_b", "wb"))
-        pickle.dump(real_cell_states, open("critic_data/real_c_mod_b", "wb"))
-
-
+        pickle.dump(real_tunes, open("state_data/real_tunes_", "wb"))
+        pickle.dump(real_hidden_states, open("state_data/real_h_mod_b", "wb"))
+        pickle.dump(real_cell_states, open("state_data/real_c_mod_b", "wb"))
 
     if states_from_generated:
         if states_from_seed:
