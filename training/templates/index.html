@@ -20,17 +20,33 @@
     <!--<a href="#" onclick="onMidi(tune); return false;">Generated</a>
     <a href="#" onclick="onMidi(own); return false;">Own</a>-->
 
-    <form action="{% url 'index' %}" method="post">
-        {% csrf_token %}
-        <input type="hidden" id="abc" name="abc" value="x:1abcsong">
-        <input type="submit" value="Dislike">
-    </form>
-    <form action="{% url 'index' %}" method="get">
-        <input type="submit" value="Like">
-    </form>
+<div class="row mt-3">
+    <div class="col-sm-3"></div>
+    <div class="col-sm-2">
+        <form action="{% url 'index' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" id="retrain_data" name="retrain_data" value="{{retrain_data}}">
+            <input type="submit" value="Dislike (x)" id="dislike">
+        </form>
+    </div>
+    <div class="col-sm-2"></div>
+    <div class="col-sm-2">
+        <form action="{% url 'index' %}" method="get">
+            <input type="submit" value="Like (c)" id ="like">
+        </form>
+    </div>
+</div>
 
-    <div id="debug">{{debug_string}}</div>
-    <div id="abc">{{tune1}}\nQ:160\n{{tune2}}\n{{tune3}}\n{{tune4}}</div>
+<div class="row mt-1"  id="helper"> </div>
+
+<div class="row mt-1" id="debug">{{debug_string}}</div>
+
+<div class="row mt-1" id="prediction">{{prediction_string}}</div>
+
+<div class="row mt-1">
+
+    <!--<div id="abc" style="overflow-wrap: anywhere;">{{tune1}}\nQ:160\n{{tune2}}\n{{tune3}}\n{{tune4}}</div>-->
+</div>
 
 {% endblock %}
 
@@ -68,6 +84,18 @@
                 document.body.onkeyup = function(e) {
                     if(e.keyCode == 32){
                         synthControl.play();
+                        document.querySelector("#helper").innerHTML = " ";
+                    }
+                    else if (e.keyCode == 88){
+                        document.querySelector("#helper").innerHTML = "pressed 'x'";
+                        document.getElementById("dislike").click();
+                        }
+                    else if (e.keyCode == 67){
+                        document.querySelector("#helper").innerHTML = "pressed 'c'";
+                        document.getElementById("like").click();
+                        }
+                    else {
+                        document.querySelector("#helper").innerHTML = "use 'space' to pause/play, 'x' to dislike and 'c' to like";
                     }
                 }
             } else {

@@ -27,7 +27,7 @@ def generate_single_tune(critic):
             prediction = critic.predict(hidden_state)[0]
             if prediction > 0.5:
                 break
-    return abc_tune, prediction
+    return abc_tune, prediction, hidden_state[0][0]
 
 def index(request):
     debug_string = ''
@@ -35,21 +35,27 @@ def index(request):
     # If this is a POST request then process the Form data
     if request.method == 'POST':
         post = request.POST
-        print('should retrain now with', post['abc'])
+        print('should retrain now with', post['retrain_data'])
+        _ = generator.set_state_from_seed(post['retrain_data'])
+        hidden = np.expand_dims(np.concatenate(generator.htm1).ravel(), axis=0)
+        critic.train_single(hidden)
+        debug_string = 'Retrained critic based on feedback'
 
 
-
-    abc_tune, prediction = generate_single_tune(critic)
+    abc_tune, prediction, hidden_state = generate_single_tune(critic)
     print(abc_tune[0][3].strip(' '))
     print(prediction)
+    retrain_tune = ' '.join([abc_tune[0][1], abc_tune[0][2], abc_tune[0][3]])
 
-    debug_string += 'prediction: ' + str(prediction)
+    prediction_string = ' prediction: ' + str(prediction)
     context = {
         'tune1': abc_tune[0][0],
         'tune2': abc_tune[0][1],
         'tune3': abc_tune[0][2],
         'tune4': abc_tune[0][3].replace(' ', ''),
+        'retrain_data': retrain_tune,
         'debug_string': debug_string,
+        'prediction_string' : prediction_string
     }
 
     # Render the HTML template index.html with the data in the context variable
