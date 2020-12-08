@@ -31,6 +31,14 @@ def generate_single_tune(critic):
 
 def index(request):
     debug_string = ''
+
+    # If this is a POST request then process the Form data
+    if request.method == 'POST':
+        post = request.POST
+        print('should retrain now with', post['abc'])
+
+
+
     abc_tune, prediction = generate_single_tune(critic)
     print(abc_tune[0][3].strip(' '))
     print(prediction)

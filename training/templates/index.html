@@ -1,76 +1,83 @@
 {% extends "base_generic.html" %}
 {% block head %}
-  {% load static %}
-  <link href="{% static 'abcjs-audio.css' %}" media="all" rel="stylesheet" type="text/css" />
-  <script src="{% static 'abcjs_basic_5.10.3-min.js' %}" type="text/javascript"></script>
-	<style>
-		.abcjs-inline-midi {
-			max-width: 400px;
-		}
-	</style>
+    {% load static %}
+    <link href="{% static 'abcjs-audio.css' %}" media="all" rel="stylesheet" type="text/css" />
+    <script src="{% static 'abcjs_basic_5.10.3-min.js' %}" type="text/javascript"></script>
+    <style>
+        .abcjs-inline-midi {
+            max-width: 400px;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-  <h1>folkcritic</h1>
+    <h1>folkcritic</h1>
 
-  <p></p>
+    <p></p>
 
-<div id="paper"></div>
-<div id="audio"></div>
-<a href="#" onclick="onMidi(tune); return false;">Generated</a>
-<a href="#" onclick="onMidi(own); return false;">Own</a>
+    <div id="paper"></div>
+    <div id="audio"></div>
+    <!--<a href="#" onclick="onMidi(tune); return false;">Generated</a>
+    <a href="#" onclick="onMidi(own); return false;">Own</a>-->
 
-<div id="debug">{{debug_string}}</div>
-<div id="abc">{{tune1}}\nQ:160\n{{tune2}}\n{{tune3}}\n{{tune4}}</div>
+    <form action="{% url 'index' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" id="abc" name="abc" value="x:1abcsong">
+        <input type="submit" value="Dislike">
+    </form>
+    <form action="{% url 'index' %}" method="get">
+        <input type="submit" value="Like">
+    </form>
 
-
+    <div id="debug">{{debug_string}}</div>
+    <div id="abc">{{tune1}}\nQ:160\n{{tune2}}\n{{tune3}}\n{{tune4}}</div>
 
 {% endblock %}
 
 {% block endscript %}
-<script type="text/javascript">
-    var tune = '{{tune1}}\nQ:160\n{{tune2}}\n{{tune3}}\n{{tune4}}'
-    var own = 'X:0\nQ:160\nM:4/4\nK:Cmaj\n|:G,C3ECEG|cdecdcAG|EG3GEGE|FEDCA,DCA,|G,C3ECEG|cdecdcAG|EG3EGAc|1GEDEC3B,:||2GEDEC3d|ecc2dcAc|GAcde3d|fecAAGEG|EEDCA,CG,C|EGG2GAcd|ecdcA2cd|ecc2AcGA|1GEDEC3c:||2GEDEC2(3CA,G,|'
-    var abcjsParams = {
-                generateInline: true,
-                generateDownload: true,
-                paddingleft:0,
-                paddingright:0,
-                responsive: "resize",
-                staffwidth: 700,
-                wrap: true,
-                millisecondsPerMeasure : 10000,
-            };
+    <script type="text/javascript">
+        var tune = '{{tune1}}\nQ:160\n{{tune2}}\n{{tune3}}\n{{tune4}}'
+        var own = 'X:0\nQ:160\nM:4/4\nK:Cmaj\n|:G,C3ECEG|cdecdcAG|EG3GEGE|FEDCA,DCA,|G,C3ECEG|cdecdcAG|EG3EGAc|1GEDEC3B,:||2GEDEC3d|ecc2dcAc|GAcde3d|fecAAGEG|EEDCA,CG,C|EGG2GAcd|ecdcA2cd|ecc2AcGA|1GEDEC3c:||2GEDEC2(3CA,G,|'
+        var abcjsParams = {
+            generateInline: true,
+            generateDownload: true,
+            paddingleft:0,
+            paddingright:0,
+            responsive: "resize",
+            staffwidth: 700,
+            wrap: true,
+            millisecondsPerMeasure : 10000,
+        };
 
-	function onMidi(input) {
-		if (ABCJS.synth.supportsAudio()) {
-		    var synth = new ABCJS.synth.CreateSynth();
-		    var visualObj = ABCJS.renderAbc('paper', input, abcjsParams)[0];
-		    var synthControl = new ABCJS.synth.SynthController();
-			synthControl.load("#audio", null, {displayRestart: true, displayPlay: true, displayProgress: true});
+        function onMidi(input) {
+            if (ABCJS.synth.supportsAudio()) {
+                var synth = new ABCJS.synth.CreateSynth();
+                var visualObj = ABCJS.renderAbc('paper', input, abcjsParams)[0];
+                var synthControl = new ABCJS.synth.SynthController();
+                synthControl.load("#audio", null, {displayRestart: true, displayPlay: true, displayProgress: true});
 
-			var audioParams = {
-                millisecondsPerMeasure : 1000,
-                options: {
-                      soundFontUrl: "https:/path/to/soundfont/folder",
-                      pan: [ -0.3, 0.3 ]
-                  }
-              };
+                var audioParams = {
+                    millisecondsPerMeasure : 1000,
+                    options: {
+                        soundFontUrl: "https:/path/to/soundfont/folder",
+                        pan: [ -0.3, 0.3 ]
+                    }
+                };
 
-			synthControl.setTune(visualObj, false, audioParams);
-			document.body.onkeyup = function(e) {
-            if(e.keyCode == 32){
-                synthControl.play();
+                synthControl.setTune(visualObj, false, audioParams);
+                document.body.onkeyup = function(e) {
+                    if(e.keyCode == 32){
+                        synthControl.play();
+                    }
                 }
+            } else {
+                document.querySelector("#audio").innerHTML = "<div class='audio-error'>Audio is not supported in this browser.</div>";
+            }
+
         }
-		} else {
-			document.querySelector("#audio").innerHTML = "<div class='audio-error'>Audio is not supported in this browser.</div>";
-		}
-
-	}
 
 
-  window.onload = onMidi(tune);
+        window.onload = onMidi(tune);
 
-</script>
+    </script>
 {% endblock %}
