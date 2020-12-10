@@ -11,6 +11,9 @@
 {% endblock %}
 
 {% block content %}
+{% if user.is_authenticated %}
+  Hi {{ user.username }}! <p><a href="{% url 'logout' %}">Log Out</a></p>
+
     <h1>folkcritic</h1>
 
     <p></p>
@@ -48,6 +51,10 @@
     <div id="abc" style="overflow-wrap: anywhere;">{{tune1}}\nQ:160\n{{tune2}}\n{{tune3}}\n{{tune4}}</div>
 </div>
 
+{% else %}
+  <p>You are not logged in</p>
+  <a href="{% url 'login' %}">Log In</a>
+{% endif %}
 {% endblock %}
 
 {% block endscript %}
