@@ -11,8 +11,19 @@
 {% endblock %}
 
 {% block content %}
-{% if user.is_authenticated %}
-  Hi {{ user.username }}! <p><a href="{% url 'logout' %}">Log Out</a></p>
+    {% if session is None %}
+    Hi {{ user.username }}!
+    Name a new session or pick an existing one to continue on.
+        {% for ses in available_sessions %}
+        <form action="{% url 'index' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" id="session" name="session" value="{{ ses.pk }}">
+            <input type="submit" value="Session {{ ses.pk }}"></input>
+        </form>
+        {% endfor %}
+    {% else %}
+
+
 
     <h1>folkcritic</h1>
 
@@ -28,13 +39,19 @@
     <div class="col-sm-2">
         <form action="{% url 'index' %}" method="post">
             {% csrf_token %}
+            <input type="hidden" id="session" name="session" value="{{session.pk}}">
             <input type="hidden" id="retrain_data" name="retrain_data" value="{{retrain_data}}">
+            <input type="hidden" id="liked" name="liked" value="False">
             <input type="submit" value="Dislike (x)" id="dislike">
         </form>
     </div>
     <div class="col-sm-2"></div>
     <div class="col-sm-2">
-        <form action="{% url 'index' %}" method="get">
+        <form action="{% url 'index' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" id="session" name="session" value="{{session.pk}}">
+            <input type="hidden" id="retrain_data" name="retrain_data" value="{{retrain_data}}">
+            <input type="hidden" id="liked" name="liked" value="True">
             <input type="submit" value="Like (c)" id ="like">
         </form>
     </div>
@@ -51,10 +68,8 @@
     <div id="abc" style="overflow-wrap: anywhere;">{{tune1}}\nQ:160\n{{tune2}}\n{{tune3}}\n{{tune4}}</div>
 </div>
 
-{% else %}
-  <p>You are not logged in</p>
-  <a href="{% url 'login' %}">Log In</a>
-{% endif %}
+
+    {% endif %}
 {% endblock %}
 
 {% block endscript %}

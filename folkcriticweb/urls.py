@@ -21,7 +21,6 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')), # new
 ]
 
-
 # Use include() to add paths from the catalog application 
 from django.urls import include
 

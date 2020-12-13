@@ -236,7 +236,7 @@ if __name__ == '__main__':
     # Different ways of generating states
     states_from_seed = False
     states_from_seed_mod = False
-    states_from_generated = True
+    states_from_generated = False
 
     number_of_songs = 23000
 
