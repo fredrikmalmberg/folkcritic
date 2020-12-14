@@ -80,6 +80,7 @@ def index(request):
                     if not Datapoint.objects.filter(tune=post['retrain_data']).exists():
                         data = Datapoint(session=db_session, tune=post['retrain_data'], liked=post['liked'])
                         data.save()
+                        data_in_session += 1
                         # Should retrain here
                         all_data = Datapoint.objects.filter(session=db_session)
                         x = None
