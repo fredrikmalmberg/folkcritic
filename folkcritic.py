@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 import pickle
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import importlib
 
 class Critic:
@@ -76,6 +76,11 @@ class Critic:
         y_train = np.zeros(x_train.shape[0])
         history = self.model.fit(x_train, y_train, batch_size=1, validation_split=0, epochs=1)
 
+    def train(self, x, y):
+        x_train = x
+        y_train = y
+        history = self.model.fit(x_train, y_train, batch_size=1, validation_split=0, epochs=1)
+
     def predict(self, input):
         return self.model.predict(input)
 
@@ -103,7 +108,7 @@ if __name__ == '__main__':
         x_real, x_generated, real_tunes, generated_tunes = critic.preprocess_data(data_path)
 
         out = critic.model.predict(x_generated)
-        _ = plt.hist(out, bins=50, label='Generated', alpha = 0.5)
+        #_ = plt.hist(out, bins=50, label='Generated', alpha = 0.5)
         print('mean: {:.2f}, var: {:.2f}, max: {:.2f}, min: {:.2f}'.format(np.mean(out), np.var(out), np.max(out),
                                                                            np.min(out)))
         i = None
@@ -119,10 +124,10 @@ if __name__ == '__main__':
 
 
         out = critic.model.predict(x_real)
-        _ = plt.hist(out, bins=50, label='Real', alpha = 0.5)
-        plt.title('Prediction histogram (23000 tunes of each class)')
-        plt.legend()
-        plt.show()
+        #_ = plt.hist(out, bins=50, label='Real', alpha = 0.5)
+        #plt.title('Prediction histogram (23000 tunes of each class)')
+        #plt.legend()
+        #plt.show()
         print('mean: {:.2f}, var: {:.2f}, max: {:.2f}, min: {:.2f}'.format(np.mean(out), np.var(out), np.max(out),
                                                                            np.min(out)))
         i = None

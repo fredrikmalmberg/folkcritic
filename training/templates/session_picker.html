@@ -1,0 +1,21 @@
+<h4>Training sessions</h4>
+<br>
+<h5>Available sessions:</h5>
+{% for ses in available_sessions %}
+<form action="{% url 'index' %}" method="post">
+    {% csrf_token %}
+    <input type="hidden" id="session" name="session" value="{{ ses.0 }}">
+    <input type="submit" value="{{ ses.1 }}" style="margin: 0; padding: 0; border: none; color: blue; background-color: transparent; text-decoration: underline;"> (tunes: {{ ses.2 }})
+</form>
+{% endfor %}
+<br>
+<br>
+<br>
+<h5>Create a new session</h5><br>
+<form action="{% url 'index' %}" method="post">
+    {% csrf_token %}
+    <label for="name">Name:</label><br>
+    <input type="text" id="name" name="new_session" value="" ><br>
+    <br>
+    <input type="submit" value="Submit">
+</form>

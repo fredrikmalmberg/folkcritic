@@ -31,68 +31,93 @@ def generate_single_tune(critic):
                 break
     return abc_tune, prediction
 
+def retrain(critic):
+
+    return critic
+
 def index(request):
     debug_string = ''
-    #if request.user.is_authenticated:
-        #if request.user.pk
-        #session = Session(user=request.user, name='1')
-        #print('user logged in and creating session')
-        #print(request.user.pk)
-    #else:
-    #    session = Session(None, name='test')
-    #session.save()
-    # If this is a POST request then process the Form data
 
     if request.user.is_authenticated:
+        if 'session' not in request.session.keys():
+            request.session['session'] = None
         if request.method == 'POST':
             post = request.POST
+            # Setting a session if we get one from the picker
             if 'session' in post.keys():
-                session = Session.objects.get(pk=post['session'])
-                if len(Datapoint.objects.filter(session=session)) == 0:
-                    print("no datapoints in this session")
+                if post['session'] == 'None':
+                    request.session['session'] = None
                 else:
-                    print("datapoints in this session!", post['session'])
-                # Save and retrain here if we get data in post...
+                    request.session['session'] = post['session']
+            if 'new_session' in post.keys():
+                if not Session.objects.filter(name=post['new_session']).exists():
+                    session = Session(user=request.user, name=post['new_session'])
+                    session.save()
+                else:
+                    # if we have a session with that name we just continue with it
+                    session = Session.objects.get(name=post['new_session'])
+                request.session['session'] = session.pk
+
+        if request.session['session'] is None:
+            # When no session is yet selected we show the session picker
+            available_sessions = Session.objects.filter(user=request.user)
+            session_info = []
+            for s in available_sessions:
+                session_info.append([s.pk, s.name, Datapoint.objects.filter(session=s).count()])
+            context = {
+                'session': None,
+                'available_sessions': session_info
+            }
+            return render(request, 'index.html', context=context)
+        else:
+            # Case when there is a session selected, continue training
+            db_session = Session.objects.get(pk=request.session['session'])
+            data_in_session = len(Datapoint.objects.filter(session=db_session))
+            # Save and retrain if we get data in post.
+            if request.method == 'POST':
+                post = request.POST
                 if 'retrain_data' in post.keys():
-                    data = Datapoint(session=session, tune=post['retrain_data'], liked=post['liked'])
-                    data.save()
-                    # Should retrain here
-                # Otherwise we just show something new
-                #print('should retrain now with', post['retrain_data'], post['liked'])
-                #_ = generator.set_state_from_seed(post['retrain_data'])
-                #hidden = np.expand_dims(np.concatenate(generator.htm1).ravel(), axis=0)
+                    if not Datapoint.objects.filter(tune=post['retrain_data']).exists():
+                        data = Datapoint(session=db_session, tune=post['retrain_data'], liked=post['liked'])
+                        data.save()
+                        # Should retrain here
+                        all_data = Datapoint.objects.filter(session=db_session)
+                        x = None
+                        y = None
+                        for idx, d in enumerate(all_data):
+                            _ = generator.set_state_from_seed(d.tune)
+                            state_to_store = np.expand_dims(np.concatenate(generator.htm1).ravel(), axis=0)
+                            target_to_store = np.ones(state_to_store.shape[0]) if d.liked else np.zeros(state_to_store.shape[0])
+                            if idx == 0:
+                                x = state_to_store
+                                y = np.array(target_to_store)
+                            else:
+                                x = np.append(np.copy(x), state_to_store, axis=0)
+                                y = np.append(np.copy(y), target_to_store, axis=0)
+                            critic.train(x, y)
 
-                #critic.train_single(hidden)
-                #debug_string = 'Retrained critic based on feedback'
-                abc_tune, prediction = generate_single_tune(critic)
-                print(abc_tune[0])
-                print(prediction)
-                retrain_tune = ' '.join([abc_tune[0][1], abc_tune[0][2], abc_tune[0][3]])
+                    debug_string = 'Retrained critic based on ' + str(data_in_session) + ' tunes.'
 
-                prediction_string = ' prediction: ' + str(prediction)
-                context = {
-                    'tune1': abc_tune[0][0],
-                    'tune2': abc_tune[0][1],
-                    'tune3': abc_tune[0][2],
-                    'tune4': abc_tune[0][3].replace(' ', ''),
-                    'retrain_data': retrain_tune,
-                    'debug_string': debug_string,
-                    'prediction_string': prediction_string,
-                    'session': session
-                }
+            # Otherwise we just show something new
+            # print('should retrain now with', post['retrain_data'], post['liked'])
 
-                # Render the HTML template index.html with the data in the context variable
-                return render(request, 'index.html', context=context)
+            abc_tune, prediction = generate_single_tune(critic)
+            retrain_tune = ' '.join([abc_tune[0][1], abc_tune[0][2], abc_tune[0][3]])
 
-        available_sessions = Session.objects.filter(user = request.user)
-        for ses in available_sessions:
-            print(ses.pk)
-        context = {
-            'session': None,
-            'available_sessions': available_sessions
-        }
-    else:
-        context = {
-            'session': None
-        }
+            prediction_string = 'Score for current tune: ' + str(prediction[0])
+            context = {
+                'tune1': abc_tune[0][0],
+                'tune2': abc_tune[0][1],
+                'tune3': abc_tune[0][2],
+                'tune4': abc_tune[0][3].replace(' ', ''),
+                'retrain_data': retrain_tune,
+                'debug_string': debug_string,
+                'prediction_string': prediction_string,
+                'session': db_session,
+                'num_datapoints': data_in_session
+            }
+            # Render the HTML template index.html with the data in the context variable
+            return render(request, 'index.html', context=context)
+    context = {
+    }
     return render(request, 'index.html', context=context)

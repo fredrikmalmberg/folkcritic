@@ -12,20 +12,12 @@
 
 {% block content %}
     {% if session is None %}
-    Hi {{ user.username }}!
-    Name a new session or pick an existing one to continue on.
-        {% for ses in available_sessions %}
-        <form action="{% url 'index' %}" method="post">
-            {% csrf_token %}
-            <input type="hidden" id="session" name="session" value="{{ ses.pk }}">
-            <input type="submit" value="Session {{ ses.pk }}"></input>
-        </form>
-        {% endfor %}
+        {% include "session_picker.html" %}
     {% else %}
 
 
 
-    <h1>folkcritic</h1>
+
 
     <p></p>
 
@@ -39,7 +31,6 @@
     <div class="col-sm-2">
         <form action="{% url 'index' %}" method="post">
             {% csrf_token %}
-            <input type="hidden" id="session" name="session" value="{{session.pk}}">
             <input type="hidden" id="retrain_data" name="retrain_data" value="{{retrain_data}}">
             <input type="hidden" id="liked" name="liked" value="False">
             <input type="submit" value="Dislike (x)" id="dislike">
@@ -49,7 +40,6 @@
     <div class="col-sm-2">
         <form action="{% url 'index' %}" method="post">
             {% csrf_token %}
-            <input type="hidden" id="session" name="session" value="{{session.pk}}">
             <input type="hidden" id="retrain_data" name="retrain_data" value="{{retrain_data}}">
             <input type="hidden" id="liked" name="liked" value="True">
             <input type="submit" value="Like (c)" id ="like">
@@ -65,7 +55,7 @@
 
 <div class="row mt-1">
 
-    <div id="abc" style="overflow-wrap: anywhere;">{{tune1}}\nQ:160\n{{tune2}}\n{{tune3}}\n{{tune4}}</div>
+    <!--<div id="abc" style="overflow-wrap: anywhere;">{{tune1}}\nQ:160\n{{tune2}}\n{{tune3}}\n{{tune4}}</div>-->
 </div>
 
 
@@ -74,7 +64,7 @@
 
 {% block endscript %}
     <script type="text/javascript">
-        var tune = {% autoescape off %}'{{tune1}}\nQ:130\n{{tune2}}\n{{tune3}}\n{{tune4}}'{% endautoescape %}
+        var tune = {% autoescape off %}"{{tune1}}\nQ:130\n{{tune2}}\n{{tune3}}\n{{tune4}}"{% endautoescape %}
         var own = 'X:0\\nQ:160\\nM:4/4\\nK:Cmix\\nG/2G/2G/2F/2EG|F/2E/2D/2E/2F2|A/2B/2A/2G/2F>E|F>G/2G/2EF|G/2F/2E/2F/2GG|F/2E/2D/2E/2B,2|CEG>F|ECC2|Gc/2c/2B/2A/2G/2F/2|ECE/2F/2G/2E/2|Ecc>B|ABG>F|GcB/2A/2G/2F/2|ECE/2E/2E/2D/2|CFBA|G/2F/2E/2D/2C2|'
         var abcjsParams = {
             generateInline: true,
@@ -125,8 +115,6 @@
             }
 
         }
-
-
         window.onload = onMidi(tune);
 
     </script>
