@@ -11,6 +11,10 @@
 {% endblock %}
 
 {% block content %}
+    {% if not user.is_authenticated %}
+        You are not logged in yet<br>
+        <a href="{% url 'login' %}">Log in</a>
+    {% else %}
     {% if session is None %}
         {% include "session_picker.html" %}
     {% else %}
@@ -60,6 +64,7 @@
 
 
     {% endif %}
+{% endif %}
 {% endblock %}
 
 {% block endscript %}
