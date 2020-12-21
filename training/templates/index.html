@@ -59,7 +59,7 @@
 
 <div class="row mt-1">
 
-    <!--<div id="abc" style="overflow-wrap: anywhere;">{{tune1}}\nQ:160\n{{tune2}}\n{{tune3}}\n{{tune4}}</div>-->
+    <div id="abc" style="overflow-wrap: anywhere;">{{tune1}}\nL:1/8\nQ:130\n{{tune2}}\n{{tune3}}\n{{tune4}}</div>
 </div>
 
 
@@ -69,7 +69,7 @@
 
 {% block endscript %}
     <script type="text/javascript">
-        var tune = {% autoescape off %}"{{tune1}}\nQ:130\n{{tune2}}\n{{tune3}}\n{{tune4}}"{% endautoescape %}
+        var tune = {% autoescape off %}"{{tune1}}\nL:1/8\nQ:130\n{{tune2}}\n{{tune3}}\n{{tune4}}"{% endautoescape %}
         var own = 'X:0\\nQ:160\\nM:4/4\\nK:Cmix\\nG/2G/2G/2F/2EG|F/2E/2D/2E/2F2|A/2B/2A/2G/2F>E|F>G/2G/2EF|G/2F/2E/2F/2GG|F/2E/2D/2E/2B,2|CEG>F|ECC2|Gc/2c/2B/2A/2G/2F/2|ECE/2F/2G/2E/2|Ecc>B|ABG>F|GcB/2A/2G/2F/2|ECE/2E/2E/2D/2|CFBA|G/2F/2E/2D/2C2|'
         var abcjsParams = {
             generateInline: true,

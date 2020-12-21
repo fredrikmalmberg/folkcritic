@@ -2,6 +2,10 @@ from django.shortcuts import render
 import importlib
 import numpy as np
 from training.models import Datapoint, Session
+
+
+from tensorflow import keras
+
 from django.contrib.auth.models import User
 fg = importlib.import_module('folkcritic-generator')
 fc = importlib.import_module('folkcritic')
@@ -11,6 +15,12 @@ generator.load_pretrained_generator('metadata/folkrnn_v2.pkl')
 
 critic = fc.Critic()
 critic.load_model('saved_models/')
+critic.model.compile(
+            loss=critic.model.loss,
+            optimizer=keras.optimizers.Adam(learning_rate=0.001),
+            metrics=[keras.metrics.MeanSquaredError()],
+        )
+
 
 #data_path = 'state_data/'
 #x_real, x_generated, real_tunes, generated_tunes = critic.preprocess_data(data_path)

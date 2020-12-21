@@ -22,10 +22,11 @@ class Critic:
 
         loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
+        # todo pretrain new model with the right metrics
         model.compile(
             loss=loss,
             optimizer=keras.optimizers.Adam(learning_rate=0.001),
-            metrics=["accuracy"],
+            metrics=[tf.keras.metrics.MeanSquaredError()],
         )
         return model
 
@@ -79,6 +80,7 @@ class Critic:
     def train(self, x, y):
         x_train = x
         y_train = y
+        #metrics = [tf.keras.metrics.MeanSquaredError()])
         history = self.model.fit(x_train, y_train, batch_size=1, validation_split=0, epochs=1)
 
     def predict(self, input):
@@ -89,8 +91,8 @@ class Critic:
 
 if __name__ == '__main__':
 
-    pretrain_and_save = False
-    load_and_test = True
+    pretrain_and_save = True
+    load_and_test = False
     data_path = 'state_data/'
     model_path = 'saved_models/'
 
