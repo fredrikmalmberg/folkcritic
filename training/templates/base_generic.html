@@ -14,34 +14,57 @@
 <div class="container-fluid">
     <div class="row pt-2 pl-3">
 
-                <h1>folkcritic</h1>
+                <div class="col-sm-10"><h1>folkcritic</h1></div>
+                <div class="col-sm-2">User: {{ user.username }} <br><a href="{% url 'logout' %}">(Log Out)</a></div>
 
     </div>
     <div class="row">
 
-            <div class="col-sm-2 pt-3"">
+            <div class="col-sm-2 pt-3">
             {% if user.is_authenticated %}
                 {% block sidebar %}
-                    User: {{ user.username }} <br><a href="{% url 'logout' %}">(Log Out)</a>
-                    <br>
+
+
                     {% if session.name is not None %}
-                    <br>Session: {{ session.name }}
+                    <div class="row ml-3  pb-4" style = 'border-bottom:1px solid;'>
+                    <h5>Session: </h5>
+                    Name: {{ session.name }}
                     <br>Rated tunes: {{ num_datapoints }}
                     <br>
                     <br>
-
                     <form action="{% url 'index' %}" method="post">
                         {% csrf_token %}
                         <input type="hidden" id="session" name="session" value="None">
                         <input type="submit" value="Change session" id="back">
                     </form>
-                        <br>
+                    </div>
+                    <div class="row ml-3 mt-3 pb-4" style = 'border-bottom:1px solid;'>
+                    <h5> Training params:</h5>
+                    <form action="{% url 'index' %}" method="post">
+                        {% csrf_token %}
+                        <label for="lr">Learning rate</label><br>
+                        <input type="text" id="lr" name="lr" value="{{lr}}" style="width:100px;"><br><br>
+                        <label for="epochs">Epochs</label><br>
+                        <input type="text" id="epochs" name="epochs" value="{{epochs}}" style="width:100px;" ><br><br>
+                        <input type="submit" value="Change parameters" id="change_params">
+                    </form>
+                    </div>
+                    <div class="row ml-3 mt-3">
+                    <form action="{% url 'index' %}" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" id="reset" name="reset" value="None">
+                        <input type="submit" value="Reset Critic" id="reset_critic">
+                    </form>
+                    </div>
+
                     {% endif %}
                 {% endblock %}
             {% endif %}
             </div>
 
-        <div class="col-sm-8 pl-5 pt-3 pr-5 pb-5 ml-3 mr-3" style="max-width:800px; background-color:white; box-shadow: 2px 2px 5px;">{% block content %}{% endblock %}</div>
+        <div class=' col-sm-8 pl-5 pt-3 pr-5 pb-5 ml-3 mr-3 ' style='max-width:800px; background-color:white; box-shadow: 2px 2px 5px;'>
+                        {% block content %}{% endblock %}
+        </div>
     </div>
 </div>
 

@@ -30,6 +30,13 @@ class Critic:
         )
         return model
 
+    def recompile(self, lr=0.001):
+        self.model.compile(
+            loss=self.model.loss,
+            optimizer=keras.optimizers.Adam(learning_rate=lr),
+            metrics=[keras.metrics.MeanSquaredError()],
+        )
+
     def preprocess_data(self, data_path):
         cwd = data_path
         b = 0
@@ -77,11 +84,10 @@ class Critic:
         y_train = np.zeros(x_train.shape[0])
         history = self.model.fit(x_train, y_train, batch_size=1, validation_split=0, epochs=1)
 
-    def train(self, x, y):
+    def train(self, x, y, epochs=1):
         x_train = x
         y_train = y
-        #metrics = [tf.keras.metrics.MeanSquaredError()])
-        history = self.model.fit(x_train, y_train, batch_size=1, validation_split=0, epochs=1)
+        history = self.model.fit(x_train, y_train, batch_size=1, validation_split=0, epochs=epochs)
 
     def predict(self, input):
         return self.model.predict(input)

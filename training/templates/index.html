@@ -35,8 +35,8 @@
     <div class="col-sm-2">
         <form action="{% url 'index' %}" method="post">
             {% csrf_token %}
-            <input type="hidden" id="retrain_data" name="retrain_data" value="{{retrain_data}}">
-            <input type="hidden" id="liked" name="liked" value="False">
+            <input type="hidden" id="retrain_data1" name="retrain_data" value="{{retrain_data}}">
+            <input type="hidden" id="liked1" name="liked" value="False">
             <input type="submit" value="Dislike (x)" id="dislike">
         </form>
     </div>
@@ -44,8 +44,8 @@
     <div class="col-sm-2">
         <form action="{% url 'index' %}" method="post">
             {% csrf_token %}
-            <input type="hidden" id="retrain_data" name="retrain_data" value="{{retrain_data}}">
-            <input type="hidden" id="liked" name="liked" value="True">
+            <input type="hidden" id="retrain_data2" name="retrain_data" value="{{retrain_data}}">
+            <input type="hidden" id="liked2" name="liked" value="True">
             <input type="submit" value="Like (c)" id ="like">
         </form>
     </div>
@@ -55,7 +55,7 @@
 
 <div class="row mt-1" id="debug">{{debug_string}}</div>
 
-<div class="row mt-1" id="prediction">{{prediction_string}}</div>
+<div class="row mt-1" id="prediction">Critic score for the current tune: {{prediction_string}}</div>
 
 <div class="row mt-1">
 
