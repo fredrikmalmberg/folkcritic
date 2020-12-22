@@ -72,7 +72,6 @@ def eval(request):
         # and storing them in the user session
         if 'start_eval' in post.keys():
             request.session['total_eval_tunes'] = int(2*(int(post['no_tunes'])//2))
-            print('will create this tunes' + str(request.session['total_eval_tunes']))
             no_of_tunes = request.session['total_eval_tunes']/2
             score = 0.5  # This sets the threshold for the tunes selected by the two critics
             request.session['eval_good'] = 0
