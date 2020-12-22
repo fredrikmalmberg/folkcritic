@@ -1,126 +1,52 @@
 {% extends "base_generic.html" %}
 {% block head %}
-    {% load static %}
-    <link href="{% static 'abcjs-audio.css' %}" media="all" rel="stylesheet" type="text/css" />
-    <script src="{% static 'abcjs_basic_5.10.3-min.js' %}" type="text/javascript"></script>
-    <style>
+{% load static %}
+<link href="{% static 'abcjs-audio.css' %}" media="all" rel="stylesheet" type="text/css" />
+<script src="{% static 'abcjs-basic.js' %}" type="text/javascript"></script>
+<style>
         .abcjs-inline-midi {
             max-width: 400px;
         }
     </style>
+{% include "abcjs_script.html" %}
 {% endblock %}
 
 {% block content %}
-    {% if not user.is_authenticated %}
-        You are not logged in yet<br>
-        <a href="{% url 'login' %}">Log in</a>
-    {% else %}
-    {% if session is None %}
-        {% include "session_picker.html" %}
-    {% else %}
+{% if not user.is_authenticated %}
+You are not logged in yet<br>
+<a href="{% url 'login' %}">Log in</a>
+{% else %}
+{% if session is None %}
+{% include "session_picker.html" %}
+{% else %}
 
 
+{% if evaluation %}
+<h2>Evaluation</h2>
+You have {{tunes_left}} tunes left out of {{total_tunes}}.
+{% if eval_result is None %}
+{% include "tune_display.html" %}
+{% else %}
+Evaluation finished with the following result:
+{{eval_result}}
+(This result is also stored in the db and can be seen in the session selector)
+{% endif %}
 
 
+{% else %}
+{% include "tune_display.html" %}
+{% endif %}
 
-    <p></p>
-
-    <div id="paper"></div>
-    <div id="audio"></div>
-    <!--<a href="#" onclick="onMidi(tune); return false;">Generated</a>
-    <a href="#" onclick="onMidi(own); return false;">Own</a>-->
-
-<div class="row mt-3">
-    <div class="col-sm-3"></div>
-    <div class="col-sm-2">
-        <form action="{% url 'index' %}" method="post">
-            {% csrf_token %}
-            <input type="hidden" id="retrain_data1" name="retrain_data" value="{{retrain_data}}">
-            <input type="hidden" id="liked1" name="liked" value="False">
-            <input type="submit" value="Dislike (x)" id="dislike">
-        </form>
-    </div>
-    <div class="col-sm-2"></div>
-    <div class="col-sm-2">
-        <form action="{% url 'index' %}" method="post">
-            {% csrf_token %}
-            <input type="hidden" id="retrain_data2" name="retrain_data" value="{{retrain_data}}">
-            <input type="hidden" id="liked2" name="liked" value="True">
-            <input type="submit" value="Like (c)" id ="like">
-        </form>
-    </div>
-</div>
-
-<div class="row mt-1"  id="helper"> </div>
-
-<div class="row mt-1" id="debug">{{debug_string}}</div>
-
-<div class="row mt-1" id="prediction">Critic score for the current tune: {{prediction_string}}</div>
-
-<div class="row mt-1">
-
-    <div id="abc" style="overflow-wrap: anywhere;">{{tune1}}\nL:1/8\nQ:130\n{{tune2}}\n{{tune3}}\n{{tune4}}</div>
-</div>
-
-
-    {% endif %}
+{% endif %}
 {% endif %}
 {% endblock %}
 
 {% block endscript %}
-    <script type="text/javascript">
-        var tune = {% autoescape off %}"{{tune1}}\nL:1/8\nQ:130\n{{tune2}}\n{{tune3}}\n{{tune4}}"{% endautoescape %}
-        var own = 'X:0\\nQ:160\\nM:4/4\\nK:Cmix\\nG/2G/2G/2F/2EG|F/2E/2D/2E/2F2|A/2B/2A/2G/2F>E|F>G/2G/2EF|G/2F/2E/2F/2GG|F/2E/2D/2E/2B,2|CEG>F|ECC2|Gc/2c/2B/2A/2G/2F/2|ECE/2F/2G/2E/2|Ecc>B|ABG>F|GcB/2A/2G/2F/2|ECE/2E/2E/2D/2|CFBA|G/2F/2E/2D/2C2|'
-        var abcjsParams = {
-            generateInline: true,
-            generateDownload: true,
-            paddingleft:0,
-            paddingright:0,
-            responsive: "resize",
-            staffwidth: 700,
-            wrap: true,
-            millisecondsPerMeasure : 10000,
-        };
+<script>
+    function on() {
+        document.getElementById("overlay").style.display = "block";
+    }
 
-        function onMidi(input) {
-            if (ABCJS.synth.supportsAudio()) {
-                var synth = new ABCJS.synth.CreateSynth();
-                var visualObj = ABCJS.renderAbc('paper', input, abcjsParams)[0];
-                var synthControl = new ABCJS.synth.SynthController();
-                synthControl.load("#audio", null, {displayRestart: true, displayPlay: true, displayProgress: true});
+</script>
 
-                var audioParams = {
-                    millisecondsPerMeasure : 1000,
-                    options: {
-                        soundFontUrl: "https:/path/to/soundfont/folder",
-                        pan: [ -0.3, 0.3 ]
-                    }
-                };
-
-                synthControl.setTune(visualObj, false, audioParams);
-                document.body.onkeyup = function(e) {
-                    if(e.keyCode == 32){
-                        synthControl.play();
-                        document.querySelector("#helper").innerHTML = " ";
-                    }
-                    else if (e.keyCode == 88){
-                        document.querySelector("#helper").innerHTML = "pressed 'x'";
-                        document.getElementById("dislike").click();
-                        }
-                    else if (e.keyCode == 67){
-                        document.querySelector("#helper").innerHTML = "pressed 'c'";
-                        document.getElementById("like").click();
-                        }
-                    else {
-                        document.querySelector("#helper").innerHTML = "use 'space' to pause/play, 'x' to dislike and 'c' to like";
-                    }
-                }
-            } else {
-                document.querySelector("#audio").innerHTML = "<div class='audio-error'>Audio is not supported in this browser.</div>";
-            }
-
-        }
-        window.onload = onMidi(tune);
-
-    </script>
 {% endblock %}

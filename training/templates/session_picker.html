@@ -2,14 +2,20 @@
 <br>
 <h5>Available sessions:</h5>
 {% for ses in available_sessions %}
-<br>
-    <form action="{% url 'index' %}" method="post">
+<br><div class="row pb-3" style="border-bottom: 1px solid;">
+    <form action="{% url 'index' %}" method="post" style="width: 100%;">
     {% csrf_token %}
 
     <input type="hidden" id="session" name="session" value="{{ ses.0 }}">
-    <input type="submit" value="Load session"> {{ ses.1 }} (tunes: {{ ses.2 }})
-</form>
+        <div class="row">
+        <div class="col-sm-4">{{ ses.1 }} (Trained on {{ ses.2 }} tunes)</div> <input type="submit" value="Load" onclick="on()">
 
+            {% if ses.3 is not None%}
+            <div class="col-sm-6">Evaluated with {{ ses.3 }} tunes <br> {{ ses.4 }}% and {{ ses.5 }}% liked from trained and untrained critic respectively.</div>
+            {% endif %}
+</div>
+</form>
+</div>
 {% endfor %}
 <br>
 <br>

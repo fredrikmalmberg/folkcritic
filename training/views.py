@@ -1,14 +1,14 @@
 from django.shortcuts import render
 import importlib
 import numpy as np
-from training.models import Datapoint, Session
+from training.models import Datapoint, Session, EvaluationResult
 from tensorflow import keras
 
 
 # Tunable params
 training_params = {
-  "Learning Rate": 0.001,
-  "Epochs": 1,
+    "Learning Rate": 0.001,
+    "Epochs": 1,
 }
 
 from django.contrib.auth.models import User
@@ -34,10 +34,146 @@ def generate_single_tune(critic):
             _ = generator.set_state_from_seed(tune)
             hidden_state = np.expand_dims(np.concatenate(generator.htm1).ravel(), axis=0)
             prediction = critic.predict(hidden_state)[0]
+            print('Critic score for generated tune: ' + str(prediction))
             if prediction > 0.5:
+                print('breaking')
                 break
     return abc_tune, prediction
 
+def get_tunes_for_eval(critic, no_of_tunes = 20, score = 0.5):
+    tunes = []
+    while len(tunes) < no_of_tunes:
+        abc_tune, _, _ = generator.generate_tunes(1, rng_seed=None)
+        tune = ' '.join([abc_tune[0][1], abc_tune[0][2], abc_tune[0][3]])
+        _ = generator.set_state_from_seed(tune)
+        hidden_state = np.expand_dims(np.concatenate(generator.htm1).ravel(), axis=0)
+        prediction = critic.predict(hidden_state)[0]
+        print('Critic score for generated tune: ' + str(prediction))
+        if prediction > score:
+            tunes.append(abc_tune)
+    return tunes
+
+
+def eval(request):
+    db_session = Session.objects.get(pk=request.session['session'])
+    if request.method == 'POST':
+        post = request.POST
+
+        # first time we are creating all the tunes for eval
+        # and storing them in the user session
+        if 'start_eval' in post.keys():
+            request.session['total_eval_tunes'] = int(2*(int(post['no_tunes'])//2))
+            print('will create this tunes' + str(request.session['total_eval_tunes']))
+            no_of_tunes = request.session['total_eval_tunes']/2
+            score = 0.5  # This sets the threshold for the tunes selected by the two critics
+            request.session['eval_good'] = 0
+            request.session['eval_bad'] = 0
+            print('starting evaluation')
+            try:
+                print('Generating tunes with trained critic')
+                good_tunes = get_tunes_for_eval(critic, no_of_tunes=no_of_tunes, score=score)
+                new_critic = fc.Critic()
+                new_critic.load_model('saved_models/pretrained_model')
+                new_critic.recompile()
+                print('Generating tunes with untrained critic')
+                bad_tunes = get_tunes_for_eval(new_critic, no_of_tunes=no_of_tunes, score=score)
+                request.session['good_tunes'] = good_tunes
+                request.session['bad_tunes'] = bad_tunes
+            except:
+               print('Creating tunes did not work')
+        else:
+        # We store the post result and whether the tune came from trained or untrained critic
+            if post['good_tune'] == 'True':
+                if post['liked'] == 'True':
+                    print('liked good tune')
+                    request.session['eval_good'] += 1
+                else:
+                    print('disliked good tune')
+            else:
+                if post['liked'] == 'True':
+                    print('liked bad tune')
+                    request.session['eval_bad'] += 1
+                else:
+                    print('disliked bad tune')
+
+    good_tunes = request.session['good_tunes']
+    bad_tunes = request.session['bad_tunes']
+    tunes_left = len(good_tunes) + len(bad_tunes)
+    total_tunes = request.session['total_eval_tunes']
+    test = np.random.rand()
+    print(test)
+    if tunes_left == 0:
+        print('no more tunes to display')
+        # Should evaluate here...
+        eval_result = 'You liked ' + str(request.session['eval_good']) + ' tunes from the trained critic and ' + \
+                      str(request.session['eval_bad']) + ' from the untrained critic (out of ' + str(total_tunes//2) + \
+                      ') songs from each.'
+
+
+        # Saving result to db
+        total_tunes = request.session['total_eval_tunes']
+        liked_tunes_from_trained = request.session['eval_good']
+        liked_tunes_from_untrained = request.session['eval_bad']
+        fraction_liked_from_trained = 2*request.session['eval_good']/total_tunes
+        fraction_liked_from_untrained = 2*request.session['eval_bad']/total_tunes
+
+        eval_result_db = EvaluationResult(session=db_session, total_tunes = total_tunes, liked_tunes_from_trained = liked_tunes_from_trained,
+                                          liked_tunes_from_untrained = liked_tunes_from_untrained,
+                                          fraction_liked_from_trained = fraction_liked_from_trained,
+                                          fraction_liked_from_untrained = fraction_liked_from_untrained)
+        eval_result_db.save()
+
+        context = {
+            'eval_result': eval_result,
+            'debug_string': '',
+            'prediction_string': '',
+            'session': db_session,
+            'lr': request.session['training_params']['Learning Rate'],
+            'epochs': request.session['training_params']['Epochs'],
+            'num_datapoints': 'NA',
+            'evaluation': True,
+            'total_tunes': total_tunes,
+            'tunes_left': tunes_left,
+        }
+        return render(request, 'index.html', context=context)
+    else:
+        if test < 0.5 and len(good_tunes) > 0:
+            abc_tune = good_tunes[0]
+            request.session['good_tunes'] = good_tunes[1:]
+            good_tune = True
+        elif len(bad_tunes) > 0:
+            abc_tune = bad_tunes[0]
+            request.session['bad_tunes'] = bad_tunes[1:]
+            good_tune = False
+        else:
+            abc_tune = good_tunes[0]
+            request.session['good_tunes'] = good_tunes[1:]
+            good_tune = True
+
+
+
+
+
+
+    context = {
+        'tune1': abc_tune[0][0],
+        'tune2': abc_tune[0][1],
+        'tune3': abc_tune[0][2],
+        'tune4': abc_tune[0][3].replace(' ', ''),
+        #'retrain_data': retrain_tune,
+        'debug_string': '',
+        'prediction_string': '',
+        'session': db_session,
+        'lr': request.session['training_params']['Learning Rate'],
+        'epochs': request.session['training_params']['Epochs'],
+        'num_datapoints': 'NA',
+        'evaluation': True,
+        'eval_result': None,
+        'total_tunes': total_tunes,
+        'tunes_left': tunes_left,
+        'good_tune': good_tune,
+    }
+    return render(request, 'index.html', context=context)
 
 def index(request):
     debug_string = ''
@@ -50,7 +186,7 @@ def index(request):
         if request.method == 'POST':
             post = request.POST
 
-            # Reseting critic
+            # Resetting critic
             if 'reset' in post.keys():
                 try:
                     critic.load_model('saved_models/pretrained_model')
@@ -64,9 +200,9 @@ def index(request):
             if 'lr' in post.keys():
                 try:
                     new_training_params = {
-                            "Learning Rate": float(post['lr']),
-                             "Epochs": int(post['epochs']),
-                            }
+                        "Learning Rate": float(post['lr']),
+                        "Epochs": int(post['epochs']),
+                    }
                     request.session['training_params'] = new_training_params
                     critic.recompile(lr=new_training_params['Learning Rate'])
                     print('Reset training params with: ')
@@ -112,7 +248,12 @@ def index(request):
             available_sessions = Session.objects.filter(user=request.user)
             session_info = []
             for s in available_sessions:
-                session_info.append([s.pk, s.name, Datapoint.objects.filter(session=s).count()])
+                if not EvaluationResult.objects.filter(session=s).exists():
+                    session_info.append([s.pk, s.name, Datapoint.objects.filter(session=s).count(), None, None, None])
+                else:
+                    print('found several evaluations.. ' + str(EvaluationResult.objects.filter(session=s).count()))
+                    e = EvaluationResult.objects.filter(session=s).order_by('-id')[0]
+                    session_info.append([s.pk, s.name, Datapoint.objects.filter(session=s).count(), e.total_tunes, 100*e.fraction_liked_from_trained, 100*e.fraction_liked_from_untrained])
             context = {
                 'session': None,
                 'available_sessions': session_info
@@ -160,7 +301,7 @@ def index(request):
             # retrain_tune is what is posted after the user decides if it is a like or not
             retrain_tune = ' '.join([abc_tune[0][1], abc_tune[0][2], abc_tune[0][3]])
 
-            prediction_string = str(prediction[0])
+            prediction_string = 'Critic score for the current tune: ' + str(prediction[0])
             context = {
                 'tune1': abc_tune[0][0],
                 'tune2': abc_tune[0][1],
@@ -172,7 +313,8 @@ def index(request):
                 'session': db_session,
                 'lr': request.session['training_params']['Learning Rate'],
                 'epochs': request.session['training_params']['Epochs'],
-                'num_datapoints': data_in_session
+                'num_datapoints': data_in_session,
+                'evaluation': False,
             }
             # Render the HTML template index.html with the data in the context variable
             return render(request, 'index.html', context=context)

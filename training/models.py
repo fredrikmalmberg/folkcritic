@@ -14,3 +14,12 @@ class Datapoint(models.Model):
     session = models.ForeignKey('Session', on_delete=models.SET_NULL, null=True)
     tune = models.CharField(max_length=1000)
     liked = models.BooleanField()
+
+class EvaluationResult(models.Model):
+    session = models.ForeignKey('Session', on_delete=models.SET_NULL, null=True)
+    total_tunes = models.IntegerField()
+    liked_tunes_from_trained = models.IntegerField()
+    liked_tunes_from_untrained = models.IntegerField()
+    fraction_liked_from_trained = models.FloatField()
+    fraction_liked_from_untrained = models.FloatField()
+
