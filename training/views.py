@@ -22,11 +22,15 @@ critic = fc.Critic()
 critic.load_model('saved_models/pretrained_model')
 critic.recompile()  # this is only done to change metrics for the pretrained model
 
-def generate_single_tune(critic):
+def generate_single_tune(critic, max_tunes = 10):
     prediction = 0
+    total_tunes = 0
     abc_tune = None
+    best_tune = None
+    best_prediction = 0
     batch = 1
     while prediction < 0.5:
+        total_tunes += 1
         abc_tunes, _, _ = generator.generate_tunes(batch, rng_seed=None)
         for i in range(batch):
             abc_tune = abc_tunes[i:i+1]
@@ -34,6 +38,11 @@ def generate_single_tune(critic):
             _ = generator.set_state_from_seed(tune)
             hidden_state = np.expand_dims(np.concatenate(generator.htm1).ravel(), axis=0)
             prediction = critic.predict(hidden_state)[0]
+            if prediction > best_prediction:
+                best_tune = abc_tune
+                best_prediction = prediction
+            if total_tunes > max_tunes:
+                return best_tune, best_prediction
             print('Critic score for generated tune: ' + str(prediction))
             if prediction > 0.5:
                 print('breaking')
