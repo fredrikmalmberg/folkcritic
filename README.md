@@ -31,11 +31,11 @@ A higher critic score indicates a more likeable song. The system generates songs
 1. Liking or disliking a song retrains the critic and generates a new song that passes the criteria above 
 2. It is possible to change the training parameters of the critic at any time and retrain it with all the songs that have been liked/disliked during the session
 3. It is also possible to reset the critic but it is worth noting that every time a new song is liked or disliked the critic is retrained on all the songs in the current session
-4. Is is always possible to change the session or create a new one
+4. It is always possible to change the session or create a new one
 5. After enough training is done, the critic can be evaluated to see if it has managed to learn the preferences of the user
 
 ### Evaluating the critic
-It is possible to evaluate the critic on any number of songs. Half of the songs are generated using the trained critic while the other half are generated using an untrained critic. The songs are then displayed to the user in random order and liked/disliked similar to the training but without displaying information on the critic score to the user. 
+It is possible to evaluate the critic on any number of songs. Half of the songs are generated using the trained critic while the other half is generated using an untrained critic. The songs are then displayed to the user in random order and liked/disliked similar to the training but without displaying the critic score to the user. 
 <img width="1440" alt="Screenshot 2022-10-22 at 14 51 16" src="https://user-images.githubusercontent.com/25374765/197340326-d240f1f7-e53b-4b76-99ec-b507f2bf1c50.png">
 
 After the user has liked/disliked the songs the result of the evaluation is displayed indicating whether the trained critic outperforms the untrained one.
@@ -43,4 +43,4 @@ After the user has liked/disliked the songs the result of the evaluation is disp
 
 ## Further improvements
 It should be noted that the setup could be improved significantly by increasing the complexity of the TF model used for the critic. Currently only one layer is used which means the model just weighs the input and is not capable of really learning anything significant. 
-Another obvious limitation is the number of songs generated before displaying a song to the user. If the critic is trained on a larger number of songs it would be beneficial to increase this number from 5 that is currently used. As the critic learns the average score of the songs from the generator tends to decrease which means fewer songs actually pass through the critics scrutiny. 
+Another obvious limitation is the number of songs generated before displaying a song to the user. If the critic is trained on a larger number of songs it would be beneficial to increase this number from 5 that is currently used. As the critic learns the average score of the songs from the generator tends to decrease which means fewer songs actually pass the critics scrutiny. 
